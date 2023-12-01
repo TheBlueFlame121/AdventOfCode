@@ -10,7 +10,7 @@ let lsb = map ((`mod` 10) . read::[Char]->Int) nums_extracted
 print $ (10*sum msb) + sum lsb
 ```
 
-The better approach (imo) that I employed in [Day01\_final.hs][Day01_final.hs] was to simply extract all digits and then do the calculation using head and last (first and last element in a list). This makes part 2 easier as well. Part 2 has the additional constraint that the digit might be spelled out like "one" instead of just a numerical "1".
+The better approach (imo) that I employed in [Day01\_final.hs](Day01_final.hs) was to simply extract all digits and then do the calculation using head and last (first and last element in a list). This makes part 2 easier as well. Part 2 has the additional constraint that the digit might be spelled out like "one" instead of just a numerical "1".
 
 The calculation using head and last is done by the function `f`. The `solve` function takes the input and a parse function to return the final value using `f`. The `parse1` uses `isDigit` to eliminate all non-numerical characters and then `digitToInt` converts a string of numerical characters to a list of Ints.
 
