@@ -1,10 +1,14 @@
+#include <algorithm>
+#include <cinttypes>
 #include <climits>
 #include <fstream>
 #include <iostream>
+#include <limits>
 #include <map>
 #include <queue>
 #include <ranges>
 #include <set>
+#include <sstream>
 #include <string>
 #include <tuple>
 #include <vector>
@@ -192,6 +196,39 @@ vector<pos> get_all_coords(grid g) {
   return out;
 }
 
+string key(pos s, pos e, int depth) {
+  stringstream ss;
+  ss << s << e;
+  return ss.str() + to_string(depth);
+}
+
+map<string, ll> cache;
+ll compute_length(pos s, pos e, int depth,
+                  map<pair<pos, pos>, vector<string>> shortest_paths_a,
+                  grid arrows) {
+  if (depth == 1) {
+    // cout << "Hit the base case" << endl;
+    return shortest_paths_a[{s, e}][0].length() + 1;
+  }
+  string k = key(s, e, depth);
+  if (cache.contains(k)) {
+    return cache[k];
+  }
+  ll optimal = numeric_limits<ll>::max();
+  for (auto path : shortest_paths_a[{s, e}]) {
+    ll length = 0;
+    string to_trace = "A" + path + "A";
+    for (int i = 0; i < to_trace.length() - 1; i++) {
+      length += compute_length(arrows.find_first(to_trace[i]),
+                               arrows.find_first(to_trace[i + 1]), depth - 1,
+                               shortest_paths_a, arrows);
+    }
+    optimal = min(optimal, length);
+  }
+  cache[k] = optimal;
+  return optimal;
+}
+
 int main(int argc, char *argv[]) {
   ifstream file("input");
   string line;
@@ -222,6 +259,12 @@ int main(int argc, char *argv[]) {
       shortest_paths_n[{s, e}] = find_paths(s, e, prev);
     }
   }
+  for (auto s : get_all_coords(numpad)) {
+    if (numpad.value(s) == ' ') {
+      continue;
+    }
+    shortest_paths_n[{s, s}] = {""};
+  }
 
   // Get shortest path between any two keys in arrows
   map<pair<pos, pos>, vector<string>> shortest_paths_a;
@@ -239,9 +282,13 @@ int main(int argc, char *argv[]) {
       shortest_paths_a[{s, e}] = find_paths(s, e, prev);
     }
   }
+  for (auto s : get_all_coords(arrows)) {
+    if (arrows.value(s) == ' ') {
+      continue;
+    }
+    shortest_paths_a[{s, s}] = {""};
+  }
 
-  // Just for testing.
-  // Later I should loop inp over input
   ll sum1 = 0;
   for (auto inp : input) {
     // inp = input[4];
@@ -268,7 +315,6 @@ int main(int argc, char *argv[]) {
     // cout << arrows1 << endl;
 
     // convert arrows1 to arrows2
-    // ideally I would loop inp over arrows1
     vector<string> arrows2;
     for (auto inp : arrows1) {
       temp.clear();
@@ -330,13 +376,44 @@ int main(int argc, char *argv[]) {
 
     string min_length =
         (*min_element(arrows3.begin(), arrows3.end(), compare_length));
-    cout << num << ": " << min_length.length() << endl;
     sum1 += stoll(num.substr(0, 3)) * min_length.length();
   }
-
   cout << "Part 1: " << sum1 << endl;
 
   ll sum2 = 0;
+  for (auto inp : input) {
+    string num = inp;
+
+    // convert number to type into arrow presses
+    vector<string> arrows1;
+    vector<vector<string>> temp;
+    string to_type = "A" + inp;
+    for (int i = 0; i < to_type.size() - 1; i++) {
+      pos s = numpad.find_first(to_type[i]);
+      pos e = numpad.find_first(to_type[i + 1]);
+      temp.push_back(shortest_paths_n[{s, e}]);
+    }
+    arrows1 = {""};
+    for (int i = 0; i < temp.size(); i++) {
+      vector<string> outtemp;
+      for (auto [a, b] : cartesian_product(arrows1, temp[i])) {
+        outtemp.push_back(a + b + "A");
+      }
+      arrows1 = outtemp;
+    }
+    ll optimal = numeric_limits<ll>::max();
+    for (auto path : arrows1) {
+      ll length = 0;
+      string to_trace = "A" + path;
+      for (int i = 0; i < to_trace.size() - 1; i++) {
+        length += compute_length(arrows.find_first(to_trace[i]),
+                                 arrows.find_first(to_trace[i + 1]), 25,
+                                 shortest_paths_a, arrows);
+      }
+      optimal = min(optimal, length);
+    }
+    sum2 += stoll(num.substr(0, 3)) * optimal;
+  }
   cout << "Part 2: " << sum2 << endl;
 
   return 0;
